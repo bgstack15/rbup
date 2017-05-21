@@ -7,7 +7,7 @@
 # Purpose: Allows customizable jobs from an easy config file
 # Package: rbup
 # History: 
-#    2016
+#    2016 Basic form for sync_smash.sh designed
 # Usage: 
 # Reference: ftemplate.sh 2017-04-17a; framework.sh 2017-04-17a
 #    /mnt/bgirton/Backups/bup_data.sh which itself was modified from darmok:/usr/local/bin/sync_smash.sh
@@ -103,7 +103,7 @@ test -z "${frameworkscript}" && echo "$0: framework not found. Aborted." 1>&2 &&
 . ${frameworkscript} || echo "$0: framework did not run properly. Continuing..." 1>&2
 infile1=
 outfile1=
-default_conffile=/home/bgirton-local/rpmbuild/SOURCES/rbup-0.0-1/etc/rbup/rbup.conf
+default_conffile=/etc/rbup/rbup.conf
 conffile="${default_conffile}"
 logfile=${scriptdir}/${scripttrim}.${today}.out # not used here. See RBUP_LOG_FILE
 interestedparties="bgstack15@gmail.com"
@@ -253,7 +253,10 @@ fi
    fistruthy "${RBUP_VERBOSE}" && verbosestate="${RBUP_SYNC_OPT_VERBOSE}"
 
    fullcommand="$( echo "${RBUP_SYNC_CMD} ${RBUP_SYNC_OPTS} ${applystate} ${verbosestate} ${RBUP_SOURCE} ${RBUP_DEST}" | sed -r -e 's/[[:space:]]+/ /g;' )"
+
+   # Run sync
    debuglev 1 && ferror "${fullcommand}"
+   ${fullcommand}
 
    # Unmount destination
    if test -n "${RBUP_DEST_UMOUNT_CMD}";
