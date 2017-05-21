@@ -1,0 +1,38 @@
+# File: /etc/rbup/rbup.conf
+# Hierarchy of precedence, and the last defined option being used.
+# /etc/rbup/rbup.conf [rbup:default]
+# /etc/rbup/rbup.conf [rbup:job]
+# file from flag -c /etc/other-file.conf
+# command line environment
+# other flags
+[rbup:default]
+RBUP_SYNC_CMD=/bin/rsync
+RBUP_SYNC_OPTS="-rlptgODwhatever"
+RBUP_SYNC_OPT_VERBOSE="-v"
+RBUP_SYNC_OPT_APPLY="-n"
+RBUP_DEST_MOUNT_CMD="mount -v jonathan:/volume1/sword /mnt/jonathan/"
+RBUP_DEST_UMOUNT_CMD="umount -l /mnt/jonathan/"
+RBUP_DEST=/mnt/jonathan
+RBUP_LOG_DIR=/var/log/rbup/
+RBUP_LOG_FILE=${RBUP_LOG_DIR}/${RBUP_JOB_NAME}.${NOW}.log
+
+RBUP_VERBOSE=yes # can be overridden by the -v/-q flag or by the job options
+
+[rbup:main]
+RBUP_JOB_NAME="mainbackup"
+RBUP_JOB_DESCRIPTION="Any extra notes can go here."
+RBUP_SOURCE=/var/storage1/shares
+#RBUP_JOB_DEST=${RBUP_DEST_DEFAULT}/backups/shares # in case you want to override it
+RBUP_CHECKSUM_COUNT=1
+RBUP_CHECKSUM_1_FILE="/var/storage1/shares/public/Age Of Empires/Installing-AoFE-on-Linux 2016-01-29.odt"
+RBUP_CHECKSUM_1_SHA256SUM=407ad21ce6b6ddb9a7f6a907134155431306a6b0450fedc3981d65311ff91c06
+
+[rbup:test]
+RBUP_JOB_NAME="testjob5"
+RBUP_JOB_DESCRIPTION="test job"
+RBUP_SOURCE=/var/storage1/shares/public
+#RBUP_JOB_DEST=${RBUP_DEST_DEFAULT}/backups/shares # in case you want to override it
+RBUP_CHECKSUM_COUNT=1
+RBUP_CHECKSUM_1_FILE="/var/storage1/shares/public/Age Of Empires/Installing-AoFE-on-Linux 2016-01-29.odt"
+RBUP_CHECKSUM_1_SHA256SUM=407ad21ce6b6ddb9a7f6a907134155431306a6b0450fedc3981d65311ff91c06
+RBUP_DEST=/mnt/foo

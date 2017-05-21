@@ -1,0 +1,3 @@
+docs/README.txt
+docs/rbup.spec
+docs/debian-rbup/control
