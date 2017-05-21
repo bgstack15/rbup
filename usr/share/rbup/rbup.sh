@@ -13,6 +13,7 @@
 #    /mnt/bgirton/Backups/bup_data.sh which itself was modified from darmok:/usr/local/bin/sync_smash.sh
 #    dnskeepalive.sh from package bgscripts-core
 # Improve:
+#    provide a reverse-direction listing-only mechanism
 fiversion="2017-04-29a"
 rbupversion="2017-05-21a"
 
@@ -31,8 +32,9 @@ Return values:
 3 Incorrect OS type
 4 Unable to find dependency
 5 Not run as root or sudo
-6 Unable to mount destination
+6 Already running or problem with lockfile or log dir
 7 Invalid checksum(s) on file(s)
+8 Unable to mount destination or checksum mismatch
 ENDUSAGE
 }
 
@@ -50,16 +52,11 @@ get_conf() {
    /bin/rm -rf "${_tmpfile1}"
 }
 
-log() {
-   # WORKHERE: figure out how logging will work
-   echo "$@"
-}
-
 # DEFINE TRAPS
 
 clean_rbup() {
    #use at end of entire script if you need to clean up tmpfiles
-   fistruthy "${RBUP_NO_CLEANUP}" || rm -rf "${tmpdir}" 1>/dev/null 2>&1
+   fistruthy "${RBUP_NO_CLEANUP}" || rm -rf "${tmpdir}" "${lockfile}" 1>/dev/null 2>&1
    :
 }
 
@@ -83,7 +80,10 @@ parseFlag() {
       "u" | "usage" | "help" | "h" ) usage; exit 1;;
       "V" | "fcheck" | "version" ) ferror "${scriptfile} version ${rbupversion}"; exit 1;;
       #"i" | "infile" | "inputfile" ) getval;infile1=${tempval};;
-      "c" | "conf" | "config" | "conffile" | "configfile" ) getval; conffile="${tempval}";;
+      "c" | "conf" | "config" | "conffile" ) getval; conffile="${tempval}";;
+      "r" | "n" | "dry" | "dryrun" ) export RBUP_ENABLED=no;;
+      "a" | "apply" ) export RBUP_ENABLED=yes;;
+      "clean" ) clean_rbup; exit 0;;
    esac
    
    debuglev 10 && { test ${hasval} -eq 1 && ferror "flag: ${flag} = ${tempval}" || ferror "flag: ${flag}"; }
@@ -91,17 +91,7 @@ parseFlag() {
 
 # DETERMINE LOCATION OF FRAMEWORK
 while read flocation; do if test -x ${flocation} && test "$( ${flocation} --fcheck )" -ge 20170111; then frameworkscript="${flocation}"; break; fi; done <<EOFLOCATIONS
-./framework.sh
-${scriptdir}/framework.sh
-~/bin/bgscripts/framework.sh
-~/bin/framework.sh
-~/bgscripts/framework.sh
-~/framework.sh
-/usr/local/bin/bgscripts/framework.sh
-/usr/local/bin/framework.sh
-/usr/bin/bgscripts/framework.sh
-/usr/bin/framework.sh
-/bin/bgscripts/framework.sh
+/usr/share/rbup/inc/framework.sh
 /usr/share/bgscripts/framework.sh
 EOFLOCATIONS
 test -z "${frameworkscript}" && echo "$0: framework not found. Aborted." 1>&2 && exit 4
@@ -113,8 +103,11 @@ test -z "${frameworkscript}" && echo "$0: framework not found. Aborted." 1>&2 &&
 . ${frameworkscript} || echo "$0: framework did not run properly. Continuing..." 1>&2
 infile1=
 outfile1=
-logfile=${scriptdir}/${scripttrim}.${today}.out
+default_conffile=/home/bgirton-local/rpmbuild/SOURCES/rbup-0.0-1/etc/rbup/rbup.conf
+conffile="${default_conffile}"
+logfile=${scriptdir}/${scripttrim}.${today}.out # not used here. See RBUP_LOG_FILE
 interestedparties="bgstack15@gmail.com"
+lockfile=/tmp/.rbup.lock
 
 # REACT TO OPERATING SYSTEM TYPE
 case $( uname -s ) in
@@ -123,18 +116,18 @@ case $( uname -s ) in
    *) echo "${scriptfile}: 3. Indeterminate OS: $( uname -s )" 1>&2 && exit 3;;
 esac
 
-## REACT TO ROOT STATUS
-#case ${is_root} in
-#   1) # proper root
-#      [ ] ;;
-#   sudo) # sudo to root
-#      [ ] ;;
-#   "") # not root at all
-#      #ferror "${scriptfile}: 5. Please run as root or sudo. Aborted."
-#      #exit 5
-#      [ ]
-#      ;;
-#esac
+# REACT TO ROOT STATUS
+case ${is_root} in
+   1) # proper root
+      [ ] ;;
+   sudo) # sudo to root
+      [ ] ;;
+   "") # not root at all
+      ferror "${scriptfile}: 5. Please run as root or sudo. Aborted."
+      exit 5
+      [ ]
+      ;;
+esac
 
 # SET CUSTOM SCRIPT AND VALUES
 #setval 1 sendsh sendopts<<EOFSENDSH      # if $1="1" then setvalout="critical-fail" on failure
@@ -158,38 +151,14 @@ validateparams - "$@"
 
 # CONFIGURE VARIABLES AFTER PARAMETERS
 
-## START READ CONFIG FILE TEMPLATE
-get_conf /home/bgirton-local/rpmbuild/SOURCES/rbup-0.0-1/etc/rbup/rbup.conf
-#oIFS="${IFS}"; IFS="$( printf '\n' )"
-#infiledata=$( ${sed} ':loop;/^\/\*/{s/.//;:ccom;s,^.[^*]*,,;/^$/n;/^\*\//{s/..//;bloop;};bccom;}' "${infile1}") #the crazy sed removes c style multiline comments
-#IFS="${oIFS}"; infilelines=$( echo "${infiledata}" | wc -l )
-#{ echo "${infiledata}"; echo "ENDOFFILE"; } | {
-#   while read line; do
-#   # the crazy sed removes leading and trailing whitespace, blank lines, and comments
-#   if test ! "${line}" = "ENDOFFILE";
-#   then
-#      line=$( echo "${line}" | sed -e 's/^\s*//;s/\s*$//;/^[#$]/d;s/\s*[^\]#.*$//;' )
-#      if test -n "${line}";
-#      then
-#         debuglev 8 && ferror "line=\"${line}\""
-#         if echo "${line}" | grep -qiE "\[.*\]";
-#         then
-#            # new zone
-#            zone=$( echo "${line}" | tr -d '[]' )
-#            debuglev 7 && ferror "zone=${zone}"
-#         else
-#            # directive
-#            varname=$( echo "${line}" | awk -F= '{print $1}' )
-#            varval=$( echo "${line}" | awk -F= '{$1=""; printf "%s", $0}' | sed 's/^ //;' )
-#            debuglev 7 && ferror "${zone}${varname}=\"${varval}\""
-#            # simple define variable
-#            eval "${zone}${varname}=\${varval}"
-#         fi
-#         ## this part is untested
-#         #read -p "Please type something here:" response < ${thistty}
-#         #echo "${response}"
-#      fi
-#   else
+# READ CONFIG FILES
+if test -f "${conffile}";
+then
+   get_conf "${conffile}"
+else
+   test "${conffile}" = "${default_conffile}" || ferror "${scriptfile}: Ignoring conf file which is not found: ${conffile}."
+fi
+test -f "${default_conffile}" && get_conf "${default_conffile}"
 
 ## REACT TO BEING A CRONJOB
 #if test ${is_cronjob} -eq 1;
@@ -199,16 +168,102 @@ get_conf /home/bgirton-local/rpmbuild/SOURCES/rbup-0.0-1/etc/rbup/rbup.conf
 #   [ ]
 #fi
 
+# EXIT IF LOCKFILE EXISTS
+if test -e "${lockfile}";
+then
+   if /bin/ps -ef | awk '/rbup/{print $2}' | grep -qiE "$( cat "${lockfile}" )";
+   then
+      ferror "Already running (pid $( cat "${lockfile}" ). Aborted."
+      exit 6
+   else
+      ferror "Previous instance did not exit cleanly."
+   fi  
+fi
+
 # SET TRAPS
 trap "CTRLC" 2
 #trap "CTRLZ" 18
 trap "clean_rbup" 0
 
+# CREATE LOCKFILE
+if ! touch "${lockfile}";
+then
+   ferror "Could not create lockfile ${lockfile}. Aborted."
+   exit 6
+else
+   echo "$$" > "${lockfile}"
+fi
+
+if ! mkdir -p "${RBUP_LOG_DIR}";
+then
+   ferror "Could not make log dir ${RBUP_LOG_DIR}. Aborted."
+   exit 6
+fi
+
 # MAIN LOOP
-#{
-   [ ]
-   set | grep -iE "^RBUP_"
-#} | tee -a ${logfile}
+{
+   flecho "${scripttrim} STARTED"
+
+   # Show used values
+   debuglev 5 && {
+      ferror "Using values"
+      # used values: RBUP_(NOW|SYNC_CMD|SYNC_OPTS|SYNC_OPT_VERBOSE|SYNC_OPT_APPLY|DEST_MOUNT_CMD|DEST_UMOUNT_CMD|DEST|LOG_DIR|VERBOSE|JOB_NAME|SOURCE|CHECKSUM_COUNT|CHECKSUM_1_FILE|CHECKSUM_1_SHA256SUM|LOG_FILE|NO_CLEANUP)"
+      set | grep -iE "^RBUP_" 1>&2
+   }
+
+   # flow:
+   # 1. confirm checksums are valid
+   # 2. mount dest
+   # 3. execute rsync
+   # 4. umount dest
+
+   # Confirm checksums are valid before running mount command
+   _x=0
+   if test -n "${RBUP_CHECKSUM_COUNT}" && fisnum "${RBUP_CHECKSUM_COUNT}";
+   then
+      while test ${_x} -lt ${RBUP_CHECKSUM_COUNT};
+      do
+         _x=$(( _x + 1 ))
+         eval thischeckedfile=\"\${RBUP_CHECKSUM_${_x}_FILE}\"
+         eval thissum=\"\${RBUP_CHECKSUM_${_x}_SHA256SUM}\"
+         thischeckedfilesum="$( /bin/sha256sum "${thischeckedfile}" | awk '{print $1}' )"
+         if test ! "${thischeckedfilesum}" = "${thissum}";
+         then
+            ferror "ERROR 8. Checksum mismatch for ${thischeckedfile}."
+            ferror "Expected checksum: \"${thissum}\""
+            ferror "Actual checksum: \"${thischeckedfilesum}\""
+            ferror "Aborted."
+            exit 8
+         else
+            debuglev 4 && ferror "Checksum valid for ${thischeckedfile}."
+         fi
+      done
+   fi
+
+   # Mount destination
+   if test -n "${RBUP_DEST_MOUNT_CMD}";
+   then
+      ${RBUP_DEST_MOUNT_CMD} && debuglev 2 && ferror "Mount successful."
+   fi
+
+   # Determine apply and verbose states
+   applystate="${RBUP_SYNC_OPT_NOT_APPLY}"
+   verbosestate="${RBUP_SYNC_OPT_NOT_VERBOSE}"
+   fistruthy "${RBUP_ENABLED}" && applystate="${RBUP_SYNC_OPT_APPLY}"
+   fistruthy "${RBUP_VERBOSE}" && verbosestate="${RBUP_SYNC_OPT_VERBOSE}"
+
+   fullcommand="$( echo "${RBUP_SYNC_CMD} ${RBUP_SYNC_OPTS} ${applystate} ${verbosestate} ${RBUP_SOURCE} ${RBUP_DEST}" | sed -r -e 's/[[:space:]]+/ /g;' )"
+   debuglev 1 && ferror "${fullcommand}"
+
+   # Unmount destination
+   if test -n "${RBUP_DEST_UMOUNT_CMD}";
+   then
+      ${RBUP_DEST_UMOUNT_CMD} && debuglev 2 && ferror "Umount successful."
+   fi
+
+   flecho "${scripttrim} STOPPED"
+
+} | tee -a ${RBUP_LOG_FILE}
 
 # EMAIL LOGFILE
 #${sendsh} ${sendopts} "${server} ${scriptfile} out" ${logfile} ${interestedparties}
