@@ -38,6 +38,23 @@ exit 0
 exit 0
 
 %files
+%dir /etc/rbup
+%dir /usr/share/rbup
+%dir /usr/share/rbup/docs
+%dir /usr/share/rbup/examples
+%dir /usr/share/rbup/inc
+%config %attr(666, -, -) /etc/rbup/rbup.conf.2017-05-21.01
+%config %attr(666, -, -) /etc/rbup/rbup.conf
+%doc %attr(444, -, -) /usr/share/rbup/docs/files-for-versioning.txt
+/usr/share/rbup/docs/rbup.spec
+%doc %attr(444, -, -) /usr/share/rbup/docs/README.txt
+/usr/share/rbup/inc/pack
+/usr/share/rbup/inc/get-files
+/usr/share/rbup/rbup.sh
+/usr/share/rbup/rbup.sh.2017-05-21.01
+%verify(link) /usr/bin/rbup
+
+%files core
 
 %changelog
 * Sun May 21 2017 B Stack <bgstack15@gmail.com> 0.0-1
