@@ -42,16 +42,18 @@ exit 0
 %dir /usr/share/rbup
 %dir /usr/share/rbup/docs
 %dir /usr/share/rbup/examples
+%dir /usr/share/rbup/examples/cron.d
 %dir /usr/share/rbup/inc
-%config %attr(666, -, -) /etc/rbup/rbup.conf.2017-05-21.01
 %config %attr(666, -, -) /etc/rbup/rbup.conf
+%config %attr(666, -, -) /etc/rbup/storage1.conf
+/etc/cron.d/rbup-storage1.cron
 %doc %attr(444, -, -) /usr/share/rbup/docs/files-for-versioning.txt
 /usr/share/rbup/docs/rbup.spec
 %doc %attr(444, -, -) /usr/share/rbup/docs/README.txt
+/usr/share/rbup/examples/cron.d/rbup-storage1.cron
 /usr/share/rbup/inc/get-files
 /usr/share/rbup/inc/pack
 /usr/share/rbup/rbup.sh
-/usr/share/rbup/rbup.sh.2017-05-21.01
 %verify(link) /usr/bin/rbup
 
 %changelog
