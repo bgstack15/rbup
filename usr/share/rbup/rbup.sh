@@ -246,16 +246,33 @@ fi
       ${RBUP_DEST_MOUNT_CMD} && debuglev 2 && ferror "Mount successful."
    fi
 
+   # Ensure mount is mounted
+   if test -n "${RBUP_MOUNT_POINT}";
+   then
+      if mount | grep -q -- "${RBUP_MOUNT_POINT}";
+      then
+         :
+      else
+         ferror "ERROR 8. Failed to mount: ${RBUP_MOUNT_POINT}."
+         ferror "Aborted."
+         exit 8
+      fi
+   fi
+
    # Determine apply and verbose states
    applystate="${RBUP_SYNC_OPT_NOT_APPLY}"
    verbosestate="${RBUP_SYNC_OPT_NOT_VERBOSE}"
    fistruthy "${RBUP_ENABLED}" && applystate="${RBUP_SYNC_OPT_APPLY}"
    fistruthy "${RBUP_VERBOSE}" && verbosestate="${RBUP_SYNC_OPT_VERBOSE}"
 
+   # Prepare full command
    fullcommand="$( echo "${RBUP_SYNC_CMD} ${RBUP_SYNC_OPTS} ${applystate} ${verbosestate} ${RBUP_SOURCE} ${RBUP_DEST}" | sed -r -e 's/[[:space:]]+/ /g;' )"
 
    # Run sync
-   debuglev 1 && ferror "${fullcommand}"
+   debuglev 1 && {
+      ferror "Executing:"
+      ferror "${fullcommand}"
+   }
    ${fullcommand}
 
    # Unmount destination
