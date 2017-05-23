@@ -48,8 +48,8 @@ exit 0
 %config %attr(666, -, -) /etc/rbup/storage1.conf
 /etc/cron.d/rbup-storage1.cron
 %doc %attr(444, -, -) /usr/share/rbup/docs/files-for-versioning.txt
-/usr/share/rbup/docs/rbup.spec
 %doc %attr(444, -, -) /usr/share/rbup/docs/README.txt
+/usr/share/rbup/docs/rbup.spec
 /usr/share/rbup/examples/cron.d/rbup-storage1.cron
 /usr/share/rbup/inc/get-files
 /usr/share/rbup/inc/pack
