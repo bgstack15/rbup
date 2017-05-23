@@ -2,7 +2,7 @@
 Summary:	rbup for EL7
 Name:		rbup
 Version:	0.0
-Release:	1
+Release:	2
 License:	CC BY-SA 4.0
 Group:		Applications/System
 Source:		rbup.tgz
@@ -57,5 +57,8 @@ exit 0
 %verify(link) /usr/bin/rbup
 
 %changelog
+* Mon May 22 2017 B Stack <bgstack15@gmail.com> 0.0-2
+- See docs/README.txt for changes to contents.
+
 * Sun May 21 2017 B Stack <bgstack15@gmail.com> 0.0-1
 - Initial rpm release. See docs/README.txt.

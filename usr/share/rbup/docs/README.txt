@@ -20,3 +20,7 @@ Please read /etc/rbup/rbup.conf to learn how to configure rbup.
 
 2017-05-21 B Stack <bgstack15@gmail.com> 0.0-1
 - Initial rpm release.
+
+2017-05-22 B Stack <bgstack15@gmail.com> 0.0-2
+- Added RBUP_MOUNT_POINT to ensure it has been mounted before running sync. This check allows a concrete check before running the sync instead of relying on just the return code of whatever RBUP_DEST_MOUNT_CMD
+- Added cronjob for rbup-storage1.
